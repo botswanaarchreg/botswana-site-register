@@ -118,11 +118,11 @@
     <h2>Botswana Archaeology Site Register</h2>
     
     <div class="preservation-slogan">
-        Preserving the Past, Protecting the Present, Conserving for Botswana’s Future! 🌍
+        🌍 Preserving the Past, Protecting the Present, Conserving for Botswana’s Future! 🌍
     </div>
     
     <div class="accuracy-warning">
-        <strong>⚠️ CRITICAL FIELD ALERT:</strong> Select your format (DD, DMS, UTM) below before inputting coordinates. To avoid severe mapping offsets, double-check that southern latitudes use negative values and UTM entries align correctly with WGS84 standards.
+        <strong>⚠️ CRITICAL FIELD ALERT ⚠️:</strong> Select your format (DD, DMS, UTM) below before inputting coordinates. To avoid severe mapping offsets, double-check that southern latitudes use negative values and UTM entries align correctly with WGS84 standards.
     </div>
 
     <form id="coordForm">
@@ -134,7 +134,7 @@
             </div>
             <div class="form-group">
                 <label for="siteName">Site Name / ID Key</label>
-                <input type="text" id="siteName" placeholder="e.g., BAS-26 / Tsodilo Outcrop" required>
+                <input type="text" id="siteName" placeholder="e.g BAS-26 / Tsodilo Outcrop" required>
             </div>
         </div>
         
@@ -144,8 +144,8 @@
             <div class="form-group">
                 <label for="coordSystemSelector">Target Coordinate System Format</label>
                 <select id="coordSystemSelector" onchange="switchCoordinateSystem(this.value)">
-                    <option value="DD">Decimal Degrees (DD) — e.g., -24.6514, 25.9088</option>
-                    <option value="DMS">Degrees Minutes Seconds (DMS) — e.g., 24°39'05"S</option>
+                    <option value="DD">Decimal Degrees (DD) — e.g. -24.6514, 25.9088</option>
+                    <option value="DMS">Degrees Minutes Seconds (DMS) — e.g. 24°39'05"S</option>
                     <option value="UTM">Universal Transverse Mercator (UTM, WGS84)</option>
                 </select>
             </div>
@@ -155,11 +155,11 @@
                 <div class="coord-row">
                     <div class="coord-col-3">
                         <label for="latitudeDD">Latitude (DD)</label>
-                        <input type="number" step="any" id="latitudeDD" placeholder="e.g., -24.6514">
+                        <input type="number" step="any" id="latitudeDD" placeholder="e.g -24.6514">
                     </div>
                     <div class="coord-col-3">
                         <label for="longitudeDD">Longitude (DD)</label>
-                        <input type="number" step="any" id="longitudeDD" placeholder="e.g., 25.9088">
+                        <input type="number" step="any" id="longitudeDD" placeholder="e.g 25.9088">
                     </div>
                     <div class="coord-col-3">
                         <label for="accuracyInputDD">Margin of Error (m)</label>
