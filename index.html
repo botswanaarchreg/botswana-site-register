@@ -7,21 +7,23 @@
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(rgba(42, 30, 22, 0.5), rgba(42, 30, 22, 0.5)), 
-                        url('https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&q=80&w=1920') no-repeat center center fixed;
+            /* 🇧🇼 Main Background: The majestic rock features of Tsodilo Hills */
+            background: linear-gradient(rgba(42, 30, 22, 0.45), rgba(42, 30, 22, 0.45)), 
+                        url('https://images.unsplash.com/photo-1627932341961-a083315a6b57?auto=format&fit=crop&q=80&w=1920') no-repeat center center fixed;
             background-size: cover;
             margin: 0;
             padding: 20px;
             display: block;
         }
         .container {
-            background: linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)), 
-                        url('https://images.unsplash.com/photo-1599733589046-10c005739ef9?auto=format&fit=crop&q=80&w=800');
+            /* 🇧🇼 Form Background: The open, textured salt crust horizons of the Makgadikgadi Pans */
+            background: linear-gradient(rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.93)), 
+                        url('https://images.unsplash.com/photo-1518098268026-4e43a1a009de?auto=format&fit=crop&q=80&w=800');
             background-size: cover;
             background-position: center;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); 
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); 
             width: 100%;
             max-width: 650px;
             margin: 0 auto 30px auto;
@@ -290,7 +292,6 @@
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwybCEjytj9a0oJms9AIygfEcErBaIsEagqHK4GdArbxrw0Rb26tnK2k8Xqp7OdkDqzWQ/exec';
     
-    // 🚀 Local memory cache to store entries for zero-lag instant filtering
     let cachedSites = []; 
 
     window.onload = function() {
@@ -427,7 +428,7 @@
             statusText.innerText = "✅ Site committed successfully! Optional parameters cleared.";
             document.getElementById('coordForm').reset();
             switchCoordinateSystem('DD');
-            loadSitesFromServer(); // Refresh local cache arrays with the newly logged data
+            loadSitesFromServer(); 
         })
         .catch(function(error) {
             statusText.style.color = "#b23b3b";
@@ -436,7 +437,6 @@
         });
     });
 
-    // 🌐 Initial synchronization fetch to push full layout to memory
     function loadSitesFromServer() {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">Syncing with live API registry...</td></tr>';
@@ -445,7 +445,7 @@
         .then(function(response) { return response.json(); })
         .then(function(data) {
             cachedSites = data || [];
-            renderFilteredSites(); // Render initial list instantly
+            renderFilteredSites(); 
         })
         .catch(function(error) {
             console.error("Database read fault:", error);
@@ -453,7 +453,6 @@
         });
     }
 
-    // ⚡ Triggered instantly by keystrokes or radio button toggles
     function fetchPreviousSites() {
         renderFilteredSites();
     }
@@ -471,7 +470,7 @@
         }
         
         let matchCount = 0;
-        let rowsHtml = ""; // String builder to prevent DOM re-paint flickering on fast input
+        let rowsHtml = ""; 
 
         for (let i = cachedSites.length - 1; i >= 0; i--) {
             let archText = (cachedSites[i].archaeologist || '').toLowerCase();
