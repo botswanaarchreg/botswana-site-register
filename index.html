@@ -266,9 +266,9 @@
     <h3>Registered Heritage Sites Database</h3>
     
     <div class="search-options">
-        <label><input type="radio" name="searchScope" value="all" checked onchange="fetchPreviousSites()"> All Fields</label>
-        <label><input type="radio" name="searchScope" value="arch" onchange="fetchPreviousSites()"> Investigator</label>
-        <label><input type="radio" name="searchScope" value="site" onchange="fetchPreviousSites()"> Site ID</label>
+        <label><input type="radio" name="searchScope" value="all" checked onchange="fetchPreviousSites()"> All Fields (Name/Site)</label>
+        <label><input type="radio" name="searchScope" value="arch" onchange="fetchPreviousSites()"> Investigator Only</label>
+        <label><input type="radio" name="searchScope" value="site" onchange="fetchPreviousSites()"> Site ID Only</label>
     </div>
     
     <input type="text" id="searchBox" class="search-box" onkeyup="fetchPreviousSites()" placeholder="Search ledger via live API query...">
@@ -288,7 +288,6 @@
 </div>
 
 <script>
-    // BOTH search queries and form configurations use this exact backend data link endpoint URL
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwybCEjytj9a0oJms9AIygfEcErBaIsEagqHK4GdArbxrw0Rb26tnK2k8Xqp7OdkDqzWQ/exec';
 
     window.onload = function() {
@@ -434,7 +433,7 @@
         });
     });
 
-    // Fetches live database inventory records directly from scriptURL link and applies search filtering instantly
+    // Real-time server query limited purely to Archaeologist Name and Site ID fields
     function fetchPreviousSites() {
         const tbody = document.getElementById('tableBody');
         let query = document.getElementById("searchBox").value.toLowerCase().trim();
@@ -452,13 +451,13 @@
             for (let i = data.length - 1; i >= 0; i--) {
                 let archText = (data[i].archaeologist || '').toLowerCase();
                 let siteText = (data[i].siteName || '').toLowerCase();
-                let descText = (data[i].siteDescription || '').toLowerCase();
                 
                 let isMatch = false;
                 if (query === "") {
                     isMatch = true;
                 } else if (scope === 'all') {
-                    isMatch = archText.includes(query) || siteText.includes(query) || descText.includes(query);
+                    // Limited purely to Archaeologist and Site Name parameters
+                    isMatch = archText.includes(query) || siteText.includes(query);
                 } else if (scope === 'arch') {
                     isMatch = archText.includes(query);
                 } else if (scope === 'site') {
