@@ -282,16 +282,19 @@
                 </tr>
             </thead>
             <tbody id="tableBody">
-                </tbody>
+            </tbody>
         </table>
     </div>
 </div>
 
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwybCEjytj9a0oJms9AIygfEcErBaIsEagqHK4GdArbxrw0Rb26tnK2k8Xqp7OdkDqzWQ/exec';
+    
+    // 🚀 Local memory cache to store entries for zero-lag instant filtering
+    let cachedSites = []; 
 
     window.onload = function() {
-        fetchPreviousSites();
+        loadSitesFromServer();
     };
 
     function switchCoordinateSystem(selectedFormat) {
@@ -424,7 +427,7 @@
             statusText.innerText = "✅ Site committed successfully! Optional parameters cleared.";
             document.getElementById('coordForm').reset();
             switchCoordinateSystem('DD');
-            fetchPreviousSites();
+            loadSitesFromServer(); // Refresh local cache arrays with the newly logged data
         })
         .catch(function(error) {
             statusText.style.color = "#b23b3b";
@@ -433,56 +436,73 @@
         });
     });
 
-    // Real-time server query limited purely to Archaeologist Name and Site ID fields
+    // 🌐 Initial synchronization fetch to push full layout to memory
+    function loadSitesFromServer() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">Syncing with live API registry...</td></tr>';
+        
+        fetch(scriptURL)
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            cachedSites = data || [];
+            renderFilteredSites(); // Render initial list instantly
+        })
+        .catch(function(error) {
+            console.error("Database read fault:", error);
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #b23b3b;">Error pulling from live database. Check console.</td></tr>';
+        });
+    }
+
+    // ⚡ Triggered instantly by keystrokes or radio button toggles
     function fetchPreviousSites() {
+        renderFilteredSites();
+    }
+
+    function renderFilteredSites() {
         const tbody = document.getElementById('tableBody');
         let query = document.getElementById("searchBox").value.toLowerCase().trim();
         let scope = document.querySelector('input[name="searchScope"]:checked').value;
 
-        fetch(scriptURL)
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            tbody.innerHTML = "";
-            if(!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">No inventory records found.</td></tr>'; return;
-            }
-            
-            let matchCount = 0;
-            for (let i = data.length - 1; i >= 0; i--) {
-                let archText = (data[i].archaeologist || '').toLowerCase();
-                let siteText = (data[i].siteName || '').toLowerCase();
-                
-                let isMatch = false;
-                if (query === "") {
-                    isMatch = true;
-                } else if (scope === 'all') {
-                    // Limited purely to Archaeologist and Site Name parameters
-                    isMatch = archText.includes(query) || siteText.includes(query);
-                } else if (scope === 'arch') {
-                    isMatch = archText.includes(query);
-                } else if (scope === 'site') {
-                    isMatch = siteText.includes(query);
-                }
+        tbody.innerHTML = "";
+        
+        if (cachedSites.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">No inventory records found.</td></tr>';
+            return;
+        }
+        
+        let matchCount = 0;
+        let rowsHtml = ""; // String builder to prevent DOM re-paint flickering on fast input
 
-                if (isMatch) {
-                    matchCount++;
-                    let row = '<tr>' +
-                        '<td><b>' + (data[i].archaeologist || '') + '</b></td>' +
-                        '<td>' + (data[i].siteName || '') + '</td>' +
-                        '<td>' + (data[i].siteDescription || '') + '</td>' +
-                    '</tr>';
-                    tbody.innerHTML += row;
-                }
-            }
+        for (let i = cachedSites.length - 1; i >= 0; i--) {
+            let archText = (cachedSites[i].archaeologist || '').toLowerCase();
+            let siteText = (cachedSites[i].siteName || '').toLowerCase();
             
-            if (matchCount === 0 && query !== "") {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">No data matches your query.</td></tr>';
+            let isMatch = false;
+            if (query === "") {
+                isMatch = true;
+            } else if (scope === 'all') {
+                isMatch = archText.includes(query) || siteText.includes(query);
+            } else if (scope === 'arch') {
+                isMatch = archText.includes(query);
+            } else if (scope === 'site') {
+                isMatch = siteText.includes(query);
             }
-        })
-        .catch(function(error) {
-            console.error("Database read fault:", error);
-            tbody.innerHTML = '';
-        });
+
+            if (isMatch) {
+                matchCount++;
+                rowsHtml += '<tr>' +
+                    '<td><b>' + (cachedSites[i].archaeologist || '') + '</b></td>' +
+                    '<td>' + (cachedSites[i].siteName || '') + '</td>' +
+                    '<td>' + (cachedSites[i].siteDescription || '') + '</td>' +
+                '</tr>';
+            }
+        }
+        
+        if (matchCount === 0 && query !== "") {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">No data matches your query.</td></tr>';
+        } else {
+            tbody.innerHTML = rowsHtml;
+        }
     }
 </script>
 </body>
