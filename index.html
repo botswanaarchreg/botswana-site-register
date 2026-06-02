@@ -118,15 +118,14 @@
     <h2>Botswana Archaeology Site Register</h2>
     
     <div class="preservation-slogan">
-        🌍 Preserving the Past, Protecting the Present, Conserving for Botswana’s Future! 🌍
+        Preserving the Past, Protecting the Present, Conserving for Botswana’s Future! 🌍
     </div>
     
     <div class="accuracy-warning">
-        <strong>⚠️ CRITICAL FIELD ALERT ⚠️:</strong> Select your format (DD, DMS, UTM) below before inputting coordinates. To avoid severe mapping offsets, double-check that southern latitudes use negative values and UTM entries align correctly with WGS84 standards.
+        <strong>⚠️ CRITICAL FIELD ALERT:</strong> Select your format (DD, DMS, UTM) below before inputting coordinates. To avoid severe mapping offsets, double-check that southern latitudes use negative values and UTM entries align correctly with WGS84 standards.
     </div>
 
     <form id="coordForm">
-        <!-- Archaeologist Name and Site Name side by side -->
         <div class="form-row">
             <div class="form-group">
                 <label for="archaeologist">Archaeologist Name</label>
@@ -134,7 +133,7 @@
             </div>
             <div class="form-group">
                 <label for="siteName">Site Name / ID Key</label>
-                <input type="text" id="siteName" placeholder="e.g BAS-26 / Tsodilo Outcrop" required>
+                <input type="text" id="siteName" placeholder="e.g., BAS-26 / Tsodilo Outcrop" required>
             </div>
         </div>
         
@@ -144,22 +143,21 @@
             <div class="form-group">
                 <label for="coordSystemSelector">Target Coordinate System Format</label>
                 <select id="coordSystemSelector" onchange="switchCoordinateSystem(this.value)">
-                    <option value="DD">Decimal Degrees (DD) — e.g. -24.6514, 25.9088</option>
-                    <option value="DMS">Degrees Minutes Seconds (DMS) — e.g. 24°39'05"S</option>
+                    <option value="DD">Decimal Degrees (DD) — e.g., -24.6514, 25.9088</option>
+                    <option value="DMS">Degrees Minutes Seconds (DMS) — e.g., 24°39'05"S</option>
                     <option value="UTM">Universal Transverse Mercator (UTM, WGS84)</option>
                 </select>
             </div>
 
-            <!-- FORMAT A: DECIMAL DEGREES (Latitude, Longitude, Error side by side) -->
             <div id="sectionDD" class="format-section active">
                 <div class="coord-row">
                     <div class="coord-col-3">
                         <label for="latitudeDD">Latitude (DD)</label>
-                        <input type="number" step="any" id="latitudeDD" placeholder="e.g -24.6514">
+                        <input type="number" step="any" id="latitudeDD" placeholder="e.g., -24.6514">
                     </div>
                     <div class="coord-col-3">
                         <label for="longitudeDD">Longitude (DD)</label>
-                        <input type="number" step="any" id="longitudeDD" placeholder="e.g 25.9088">
+                        <input type="number" step="any" id="longitudeDD" placeholder="e.g., 25.9088">
                     </div>
                     <div class="coord-col-3">
                         <label for="accuracyInputDD">Margin of Error (m)</label>
@@ -168,7 +166,6 @@
                 </div>
             </div>
 
-            <!-- FORMAT B: DEGREES MINUTES SECONDS -->
             <div id="sectionDMS" class="format-section">
                 <div class="coord-row">
                     <div class="coord-col-2">
@@ -194,7 +191,6 @@
                 </div>
             </div>
 
-            <!-- FORMAT C: UTM -->
             <div id="sectionUTM" class="format-section">
                 <div class="form-group">
                     <label for="utmZone">UTM Grid Zone</label>
@@ -220,7 +216,6 @@
             </div>
         </div>
 
-        <!-- 📂 OPTIONAL MEDIA & SITE REPORT UPLOAD INTERFACES -->
         <div class="coord-row">
             <div class="coord-col-2 form-group">
                 <label>📸 Upload Site Media <span class="optional-tag">(Optional)</span></label>
@@ -270,7 +265,6 @@
 <div class="table-container">
     <h3>Registered Heritage Sites Database</h3>
     
-    <!-- Search Radio Buttons Context Selection -->
     <div class="search-options">
         <label><input type="radio" name="searchScope" value="all" checked onchange="filterTable()"> All Fields</label>
         <label><input type="radio" name="searchScope" value="arch" onchange="filterTable()"> Investigator</label>
@@ -288,7 +282,7 @@
                 </tr>
             </thead>
             <tbody id="tableBody">
-                <tr>
+                <tr class="message-row">
                     <td colspan="3" style="text-align:center; color: #7f6b5c;">Establishing live link to inventory ledger...</td>
                 </tr>
             </tbody>
@@ -317,13 +311,15 @@
             alert("Fetching device location details... Inputs will auto-populate.");
             navigator.geolocation.getCurrentPosition(
                 function(position) {
-                    document.getElementById('latitudeDD').value = position.coords.latitude;
-                    document.getElementById('longitudeDD').value = position.coords.longitude;
+                    document.getElementById('latitudeDD').value = position.coords.latitude.toFixed(6);
+                    document.getElementById('longitudeDD').value = position.coords.longitude.toFixed(6);
                     document.getElementById('accuracyInputDD').value = Math.round(position.coords.accuracy);
                 },
                 function(error) { alert("GPS Fault: " + error.message); },
                 { enableHighAccuracy: true, timeout: 20000 }
             );
+        } else {
+            alert("Geolocation services are not supported by this browser client.");
         }
     }
 
@@ -446,39 +442,43 @@
         .then(function(response) { return response.json(); })
         .then(function(data) {
             tbody.innerHTML = "";
-            if(data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No inventory records found.</td></tr>'; return;
+            if(!data || data.length === 0) {
+                tbody.innerHTML = '<tr class="message-row"><td colspan="3" style="text-align:center;">No inventory records found.</td></tr>'; return;
             }
             for (let i = data.length - 1; i >= 0; i--) {
                 let row = '<tr>' +
-                    '<td><b>' + data[i].archaeologist + '</b></td>' +
-                    '<td>' + data[i].siteName + '</td>' +
+                    '<td><b>' + (data[i].archaeologist || '') + '</b></td>' +
+                    '<td>' + (data[i].siteName || '') + '</td>' +
                     '<td>' + (data[i].siteDescription || '') + '</td>' +
                 '</tr>';
                 tbody.innerHTML += row;
             }
+            filterTable();
         })
         .catch(function(error) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#b23b3b;">Inventory data offline or waiting for setup link.</td></tr>';
+            console.error("Database read fault:", error);
+            tbody.innerHTML = '<tr class="message-row"><td colspan="3" style="text-align:center; color:#b23b3b;">Inventory data offline or waiting for setup link.</td></tr>';
         });
     }
 
     function filterTable() {
-        let query = document.getElementById("searchBox").value.toLowerCase();
+        let query = document.getElementById("searchBox").value.toLowerCase().trim();
         let rows = document.getElementById("tableBody").getElementsByTagName("tr");
         let scope = document.querySelector('input[name="searchScope"]:checked').value;
         
         for (let i = 0; i < rows.length; i++) {
+            if (rows[i].classList.contains('message-row')) continue;
+            
             let cells = rows[i].getElementsByTagName("td");
-            if (cells.length < 3) continue; // Skip message rows
+            if (cells.length < 3) continue;
             
             let archText = cells[0].textContent.toLowerCase();
             let siteText = cells[1].textContent.toLowerCase();
-            let allText = rows[i].textContent.toLowerCase();
+            let descText = cells[2].textContent.toLowerCase();
             
             let match = false;
             if (scope === 'all') {
-                match = allText.includes(query);
+                match = archText.includes(query) || siteText.includes(query) || descText.includes(query);
             } else if (scope === 'arch') {
                 match = archText.includes(query);
             } else if (scope === 'site') {
