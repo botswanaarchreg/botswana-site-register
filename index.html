@@ -47,16 +47,8 @@
         input:focus, textarea:focus, select:focus { border-color: #a0522d; outline: none; background-color: #fff; }
         
         .accuracy-warning {
-            padding: 12px 15px; border-radius: 4px; margin-bottom: 20px; font-size: 13px; line-height: 1.4; max-height: 4.8em; overflow: hidden; animation: warningPulse 2s infinite ease-in-out;
+            padding: 12px 15px; border-radius: 4px; margin-bottom: 20px; font-size: 13px; line-height: 1.4;
         }
-        @keyframes warningPulse {
-            0% { background-color: #fffaf0; border: 1px solid #feebc8; border-left: 5px solid #c96f2c; color: #6e4e37; }
-            50% { background-color: #fff5f5; border: 1px solid #feb2b2; border-left: 5px solid #e53e3e; color: #9b2c2c; box-shadow: 0 0 10px rgba(229, 62, 62, 0.15); }
-            100% { background-color: #fffaf0; border: 1px solid #feebc8; border-left: 5px solid #c96f2c; color: #6e4e37; }
-        }
-        .accuracy-warning strong { font-weight: 700; animation: textPulse 2s infinite ease-in-out; }
-        @keyframes textPulse { 0% { color: #c96f2c; } 50% { color: #e53e3e; } 100% { color: #c96f2c; } }
-        
         .coord-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
         .coord-col-3 { flex: 1; min-width: 140px; }
         .coord-col-2 { flex: 1; min-width: 200px; }
@@ -116,7 +108,7 @@
     </div>
     
     <div class="accuracy-warning">
-        <strong>⚠️ CRITICAL FIELD ALERT:</strong> Select your format (DD, DMS, UTM) below before inputting coordinates. To avoid severe mapping offsets, double-check that southern latitudes use negative values and UTM entries align correctly with WGS84 standards.
+        <strong>⚠️ CRITICAL FIELD ALERT:</strong> Select your format (DD, DMS, UTM) below before inputting coordinates. Southern latitudes must use negative values.
     </div>
 
     <form id="coordForm">
@@ -260,12 +252,12 @@
     <h3>Registered Heritage Sites Database</h3>
     
     <div class="search-options">
-        <label><input type="radio" name="searchScope" value="all" checked onchange="fetchPreviousSites()"> All Fields (Name/Site)</label>
-        <label><input type="radio" name="searchScope" value="arch" onchange="fetchPreviousSites()"> Investigator Only</label>
-        <label><input type="radio" name="searchScope" value="site" onchange="fetchPreviousSites()"> Site ID Only</label>
+        <label><input type="radio" name="searchScope" value="all" checked onchange="renderFilteredSites()"> All Fields (Name/Site)</label>
+        <label><input type="radio" name="searchScope" value="arch" onchange="renderFilteredSites()"> Investigator Only</label>
+        <label><input type="radio" name="searchScope" value="site" onchange="renderFilteredSites()"> Site ID Only</label>
     </div>
     
-    <input type="text" id="searchBox" class="search-box" onkeyup="fetchPreviousSites()" placeholder="Search ledger via live API query...">
+    <input type="text" id="searchBox" class="search-box" onkeyup="renderFilteredSites()" placeholder="Search ledger via live API query...">
     <div style="overflow-x:auto;">
         <table id="sitesTable">
             <thead>
@@ -282,81 +274,102 @@
 </div>
 
 <script>
-    // PASTE YOUR NEW RE-DEPLOYED WEB APP URL ENDING IN /exec HERE:
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbwybCEjytj9a0oJms9AIygfEcErBaIsEagqHK4GdArbxrw0Rb26tnK2k8Xqp7OdkDqzWQ/exec';
+// ==================== CONFIGURATION ====================
+const scriptURL = 'https://script.google.com/macros/s/AKfycbwybCEjytj9a0oJms9AIygfEcErBaIsEagqHK4GdArbxrw0Rb26tnK2k8Xqp7OdkDqzWQ/exec';
+let cachedSites = [];
+
+// ==================== COORDINATE SWITCH ====================
+function switchCoordinateSystem(selectedFormat) {
+    document.querySelectorAll('.format-section').forEach(function(el) {
+        el.classList.remove('active');
+    });
+    document.getElementById('section' + selectedFormat).classList.add('active');
+}
+
+// ==================== AUTO GPS ====================
+function getLocation() {
+    if (navigator.geolocation) {
+        document.getElementById('coordSystemSelector').value = 'DD';
+        switchCoordinateSystem('DD');
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                document.getElementById('latitudeDD').value = position.coords.latitude.toFixed(6);
+                document.getElementById('longitudeDD').value = position.coords.longitude.toFixed(6);
+                document.getElementById('accuracyInputDD').value = Math.round(position.coords.accuracy);
+            },
+            function(error) { alert("GPS Error: " + error.message); },
+            { enableHighAccuracy: true, timeout: 20000 }
+        );
+    } else {
+        alert("Geolocation is not supported by this browser.");
+    }
+}
+
+// ==================== UTM TO DD CONVERTER ====================
+function convertUtmToDd(easting, northing, zone) {
+    const a = 6378137.0; 
+    const f = 1 / 298.257223563; 
+    const b = a * (1 - f);
+    const e2 = (a*a - b*b) / (a*a); 
+    const ePrime2 = (a*a - b*b) / (b*b);
+    const k0 = 0.9996; 
+    const falseEasting = 500000.0; 
+    const falseNorthing = 10000000.0;
     
-    let cachedSites = []; 
-
-    window.onload = function() {
-        loadSitesFromServer();
-    };
-
-    function switchCoordinateSystem(selectedFormat) {
-        document.querySelectorAll('.format-section').forEach(function(el) {
-            el.classList.remove('active');
-        });
-        document.getElementById('section' + selectedFormat).classList.add('active');
+    let x = easting - falseEasting; 
+    let y = northing - falseNorthing; 
+    let utmZoneCM = ((zone * 6) - 183) * Math.PI / 180;
+    
+    // (Full converter kept as in original)
+    let n = (a - b) / (a + b);
+    let alpha = (a + b) / 2 * (1 + (n*n)/4 + (n*n*n*n)/144);
+    let beta = (3*n/2 - 27*n*n*n/32) * Math.PI / 180;
+    let gamma = (21*n*n/16 - 55*n*n*n*n/32) * Math.PI / 180;
+    let delta = (151*n*n*n/96) * Math.PI / 180;
+    let m = y / k0; 
+    let phi1Rad = m / alpha;
+    
+    for (let j = 0; j < 5; j++) {
+        phi1Rad = (m + beta * Math.sin(2 * phi1Rad) + gamma * Math.sin(4 * phi1Rad) + delta * Math.sin(6 * phi1Rad)) / alpha;
     }
+    
+    let sinPhi1 = Math.sin(phi1Rad); 
+    let cosPhi1 = Math.cos(phi1Rad); 
+    let tanPhi1 = Math.tan(phi1Rad);
+    let t1 = tanPhi1 * tanPhi1; 
+    let c1 = ePrime2 * cosPhi1 * cosPhi1;
+    let n1 = a / Math.sqrt(1 - e2 * sinPhi1 * sinPhi1); 
+    let r1 = a * (1 - e2) / Math.pow(1 - e2 * sinPhi1 * sinPhi1, 1.5);
+    let d = x / (n1 * k0);
+    
+    let lat = phi1Rad - (n1 * tanPhi1 / r1) * (d*d/2 - (5 + 3*t1 + 10*c1 - 4*c1*c1 - 9*ePrime2)*d*d*d*d/24);
+    let lon = utmZoneCM + (d - (1 + 2*t1 + c1)*d*d*d/6 + (5 - 2*c1 + 28*t1 - 3*c1*c1 + 8*c1 + 24*t1*t1)*d*d*d*d*d/120) / cosPhi1;
+    
+    return { lat: lat * 180 / Math.PI, lon: lon * 180 / Math.PI };
+}
 
-    function getLocation() {
-        if (navigator.geolocation) {
-            document.getElementById('coordSystemSelector').value = 'DD';
-            switchCoordinateSystem('DD');
-            alert("Fetching device location details... Inputs will auto-populate.");
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    document.getElementById('latitudeDD').value = position.coords.latitude.toFixed(6);
-                    document.getElementById('longitudeDD').value = position.coords.longitude.toFixed(6);
-                    document.getElementById('accuracyInputDD').value = Math.round(position.coords.accuracy);
-                },
-                function(error) { alert("GPS Fault: " + error.message); },
-                { enableHighAccuracy: true, timeout: 20000 }
-            );
-        } else {
-            alert("Geolocation services are not supported by this browser client.");
-        }
-    }
+// ==================== BASE64 CONVERTER ====================
+async function getBase64(file) {
+    if (!file) return "";
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
 
-    function convertUtmToDd(easting, northing, zone) {
-        const a = 6378137.0; const f = 1 / 298.257223563; const b = a * (1 - f);
-        const e2 = (a*a - b*b) / (a*a); const ePrime2 = (a*a - b*b) / (b*b);
-        const k0 = 0.9996; const falseEasting = 500000.0; const falseNorthing = 10000000.0;
-        let x = easting - falseEasting; let y = northing - falseNorthing; 
-        let utmZoneCM = ((zone * 6) - 183) * Math.PI / 180;
-        let n = (a - b) / (a + b);
-        let alpha = (a + b) / 2 * (1 + (n*n)/4 + (n*n*n*n)/144);
-        let beta = (3*n/2 - 27*n*n*n/32) * Math.PI / 180;
-        let gamma = (21*n*n/16 - 55*n*n*n*n/32) * Math.PI / 180;
-        let delta = (151*n*n*n/96) * Math.PI / 180;
-        let m = y / k0; let phi1Rad = m / alpha;
-        for (let j = 0; j < 5; j++) {
-            phi1Rad = (m + beta * Math.sin(2 * phi1Rad) + gamma * Math.sin(4 * phi1Rad) + delta * Math.sin(6 * phi1Rad)) / alpha;
-        }
-        let sinPhi1 = Math.sin(phi1Rad); let cosPhi1 = Math.cos(phi1Rad); let tanPhi1 = Math.tan(phi1Rad);
-        let t1 = tanPhi1 * tanPhi1; let c1 = ePrime2 * cosPhi1 * cosPhi1;
-        let n1 = a / Math.sqrt(1 - e2 * sinPhi1 * sinPhi1); let r1 = a * (1 - e2) / Math.pow(1 - e2 * sinPhi1 * sinPhi1, 1.5);
-        let d = x / (n1 * k0);
-        let lat = phi1Rad - (n1 * tanPhi1 / r1) * (d*d/2 - (5 + 3*t1 + 10*c1 - 4*c1*c1 - 9*ePrime2)*d*d*d*d/24);
-        let lon = utmZoneCM + (d - (1 + 2*t1 + c1)*d*d*d/6 + (5 - 2*c1 + 28*t1 - 3*c1*c1 + 8*c1 + 24*t1*t1)*d*d*d*d*d/120) / cosPhi1;
-        return { lat: lat * 180 / Math.PI, lon: lon * 180 / Math.PI };
-    }
+// ==================== FORM SUBMIT ====================
+document.getElementById('coordForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    let finalLat = null; 
+    let finalLon = null; 
+    let finalAccuracy = 5;
+    const currentSystem = document.getElementById('coordSystemSelector').value;
+    const statusText = document.getElementById('statusMessage');
 
-    function getBase64(file) {
-        if (!file) return Promise.resolve("");
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-    }
-
-    document.getElementById('coordForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        let finalLat = null; let finalLon = null; let finalAccuracy = 5;
-        const currentSystem = document.getElementById('coordSystemSelector').value;
-
+    try {
         if (currentSystem === 'DD') {
             finalLat = parseFloat(document.getElementById('latitudeDD').value);
             finalLon = parseFloat(document.getElementById('longitudeDD').value);
@@ -369,6 +382,7 @@
             let lonD = parseFloat(document.getElementById('lonDeg').value) || 0;
             let lonM = parseFloat(document.getElementById('lonMin').value) || 0;
             let lonS = parseFloat(document.getElementById('lonSec').value) || 0;
+            
             finalLat = -(latD + (latM / 60) + (latS / 3600));
             finalLon = (lonD + (lonM / 60) + (lonS / 3600));
             finalAccuracy = parseInt(document.getElementById('accuracyInputDMS').value) || 5;
@@ -377,20 +391,20 @@
             let easting = parseFloat(document.getElementById('utmEasting').value);
             let northing = parseFloat(document.getElementById('utmNorthing').value);
             let zone = parseInt(document.getElementById('utmZone').value);
-            if (!easting || !northing) { alert("Please declare your specific Easting and Northing values."); return; }
+            if (!easting || !northing) throw new Error("Easting and Northing are required for UTM.");
             let converted = convertUtmToDd(easting, northing, zone);
-            finalLat = converted.lat; finalLon = converted.lon;
+            finalLat = converted.lat; 
+            finalLon = converted.lon;
             finalAccuracy = parseInt(document.getElementById('accuracyInputUTM').value) || 5;
         }
 
         if (isNaN(finalLat) || isNaN(finalLon)) {
-            alert("Translation processing faulted. Verify formatting properties and execute again."); return;
+            throw new Error("Invalid coordinates. Please check input values.");
         }
 
-        const statusText = document.getElementById('statusMessage');
         statusText.style.color = "#8c6239";
-        statusText.innerText = "Encoding attachments and updating database ledger...";
-        
+        statusText.innerText = "Encoding files and submitting to database...";
+
         const mediaFile = document.getElementById('mediaUpload').files[0];
         const reportFile = document.getElementById('reportUpload').files[0];
         
@@ -411,91 +425,103 @@
             reportName: reportFile ? reportFile.name : ""
         };
 
-        fetch(scriptURL, { 
-            method: 'POST', mode: 'no-cors', cache: 'no-cache', 
-            headers: { 'Content-Type': 'application/json' }, 
+        const response = await fetch(scriptURL, { 
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload) 
-        })
-        .then(function() {
+        });
+
+        const result = await response.text();
+        console.log("Server response:", result);
+
+        if (response.ok) {
             statusText.style.color = "#5b7053";
-            statusText.innerText = "✅ Site committed successfully! Optional parameters cleared.";
+            statusText.innerText = "✅ Site committed successfully! Refreshing database...";
             document.getElementById('coordForm').reset();
             switchCoordinateSystem('DD');
-            loadSitesFromServer(); 
-        })
-        .catch(function(error) {
-            statusText.style.color = "#b23b3b";
-            statusText.innerText = "❌ Connection timeout during server write.";
-            console.error(error);
-        });
-    });
-
-    function loadSitesFromServer() {
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">Syncing with live API registry...</td></tr>';
-        
-        fetch(scriptURL)
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            cachedSites = data || [];
-            renderFilteredSites(); 
-        })
-        .catch(function(error) {
-            console.error("Database read fault:", error);
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #b23b3b;">Error pulling from live database. Check console.</td></tr>';
-        });
-    }
-
-    function fetchPreviousSites() {
-        renderFilteredSites();
-    }
-
-    function renderFilteredSites() {
-        const tbody = document.getElementById('tableBody');
-        let query = document.getElementById("searchBox").value.toLowerCase().trim();
-        let scope = document.querySelector('input[name="searchScope"]:checked').value;
-
-        tbody.innerHTML = "";
-        
-        if (cachedSites.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">No inventory records found.</td></tr>';
-            return;
-        }
-        
-        let matchCount = 0;
-        let rowsHtml = ""; 
-
-        for (let i = cachedSites.length - 1; i >= 0; i--) {
-            let archText = (cachedSites[i].archaeologist || '').toLowerCase();
-            let siteText = (cachedSites[i].siteName || '').toLowerCase();
-            
-            let isMatch = false;
-            if (query === "") {
-                isMatch = true;
-            } else if (scope === 'all') {
-                isMatch = archText.includes(query) || siteText.includes(query);
-            } else if (scope === 'arch') {
-                isMatch = archText.includes(query);
-            } else if (scope === 'site') {
-                isMatch = siteText.includes(query);
-            }
-
-            if (isMatch) {
-                matchCount++;
-                rowsHtml += '<tr>' +
-                    '<td><b>' + (cachedSites[i].archaeologist || '') + '</b></td>' +
-                    '<td>' + (cachedSites[i].siteName || '') + '</td>' +
-                    '<td>' + (cachedSites[i].siteDescription || '') + '</td>' +
-                '</tr>';
-            }
-        }
-        
-        if (matchCount === 0 && query !== "") {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">No data matches your query.</td></tr>';
+            loadSitesFromServer();
         } else {
-            tbody.innerHTML = rowsHtml;
+            throw new Error("Server error: " + response.status);
+        }
+
+    } catch (error) {
+        console.error(error);
+        statusText.style.color = "#b23b3b";
+        statusText.innerText = "❌ " + error.message;
+    }
+});
+
+// ==================== LOAD SITES ====================
+function loadSitesFromServer() {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">Syncing with live database...</td></tr>';
+    
+    const cacheBuster = scriptURL + (scriptURL.includes('?') ? '&' : '?') + 't=' + Date.now();
+    
+    fetch(cacheBuster, { cache: 'no-store' })
+    .then(function(response) { 
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json(); 
+    })
+    .then(function(data) {
+        cachedSites = data || [];
+        renderFilteredSites(); 
+    })
+    .catch(function(error) {
+        console.error("Database read error:", error);
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #b23b3b;">Could not load data. Check Google Apps Script deployment.</td></tr>';
+    });
+}
+
+// ==================== RENDER TABLE ====================
+function renderFilteredSites() {
+    const tbody = document.getElementById('tableBody');
+    let query = document.getElementById("searchBox").value.toLowerCase().trim();
+    let scope = document.querySelector('input[name="searchScope"]:checked').value;
+
+    tbody.innerHTML = "";
+    
+    if (cachedSites.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">No records found.</td></tr>';
+        return;
+    }
+    
+    let matchCount = 0;
+    let rowsHtml = ""; 
+
+    for (let i = cachedSites.length - 1; i >= 0; i--) {
+        let archText = (cachedSites[i].archaeologist || '').toLowerCase();
+        let siteText = (cachedSites[i].siteName || '').toLowerCase();
+        
+        let isMatch = false;
+        if (query === "") {
+            isMatch = true;
+        } else if (scope === 'all') {
+            isMatch = archText.includes(query) || siteText.includes(query);
+        } else if (scope === 'arch') {
+            isMatch = archText.includes(query);
+        } else if (scope === 'site') {
+            isMatch = siteText.includes(query);
+        }
+
+        if (isMatch) {
+            matchCount++;
+            rowsHtml += '<tr>' +
+                '<td><b>' + (cachedSites[i].archaeologist || '') + '</b></td>' +
+                '<td>' + (cachedSites[i].siteName || '') + '</td>' +
+                '<td>' + (cachedSites[i].siteDescription || '') + '</td>' +
+            '</tr>';
         }
     }
+    
+    tbody.innerHTML = (matchCount === 0 && query !== "") 
+        ? '<tr><td colspan="3" style="text-align:center; color: #7f6b5c;">No matches found.</td></tr>' 
+        : rowsHtml;
+}
+
+// Initialize
+window.onload = loadSitesFromServer;
 </script>
 </body>
 </html>
