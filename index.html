@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNMM Botswana Site Register</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 15px; background: #f1f5f9; color: #1e293b; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-top: 5px solid #d97706; }
+        h1 { font-size: 16px; text-transform: uppercase; text-align: center; margin: 0 0 15px 0; color: #0f172a; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 4px; color: #334155; text-transform: uppercase; }
+        input[type="text"], textarea { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .gps-btn { width: 100%; background: #0284c7; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; margin: 5px 0 15px 0; font-size: 12px; }
+        input[type="file"] { width: 100%; padding: 6px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px; font-size: 11px; box-sizing: border-box; }
+        .submit-btn { width: 100%; background: #10b981; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; font-size: 14px; cursor: pointer; text-transform: uppercase; margin-top: 15px; }
+        .submit-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .status { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; font-size: 12px; text-align: center; font-weight: bold; }
+        .status.loading { display: block; background: #e0f2fe; color: #0369a1; }
+        .status.success { display: block; background: #dcfce7; color: #166534; }
+        .status.error { display: block; background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Department of National Museums and Monuments (DNMM)</h1>
+    <form id="surveyForm">
+        <div class="grid">
+            <div class="form-group">
+                <label>Archaeologist Name</label>
+                <input type="text" id="archaeologist" required placeholder="e.g., K. Seboni">
+            </div>
+            <div class="form-group">
+                <label>Site Name / ID Key</label>
+                <input type="text" id="siteName" required placeholder="e.g., TSOD-04">
+            </div>
+        </div>
+
+        <label>Spatial Satellites Control</label>
+        <button type="button" class="gps-btn" id="geoBtn">🔄 Query Mobile Hardware GPS Coordinates</button>
+        
+        <div class="grid">
+            <div class="form-group">
+                <label>Latitude (DD)</label>
+                <input type="text" id="lat_dd" required placeholder="-18.724105">
+            </div>
+            <div class="form-group">
+                <label>Longitude (DD)</label>
+                <input type="text" id="lng_dd" required placeholder="21.890412">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>GPS Accuracy Margin (Meters)</label>
+            <input type="text" id="accuracy" readonly placeholder="Automatic accuracy metrics" style="background:#f1f5f9;">
+        </div>
+
+        <div class="form-group">
+            <label>Contextual Site Features Description</label>
+            <textarea id="siteDescription" rows="3" required placeholder="Material items, structures..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Field Notes / Conservation Status</label>
+            <textarea id="notes" rows="2" placeholder="Environmental threats..."></textarea>
+        </div>
+
+        <div class="grid">
+            <div class="form-group">
+                <label>Site Feature Photo Document</label>
+                <input type="file" id="mediaFile" accept="image/*">
+            </div>
+            <div class="form-group">
+                <label>Survey Text Report (.pdf)</label>
+                <input type="file" id="reportFile" accept=".pdf">
+            </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="subBtn">Commit Record to National Ledger</button>
+    </form>
+    <div id="statusBox" class="status"></div>
+</div>
+
+<script>
+    // PASTE YOUR WEB APP ENDPOINT URL BETWEEN THE QUOTES BELOW:
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbwybCEjytj9a0oJms9AIygfEcErBaIsEagqHK4GdArbxrw0Rb26tnK2k8Xqp7OdkDqzWQ/exec';
+
+    // Device Hardware GPS Poller
+    document.getElementById('geoBtn').addEventListener('click', () => {
+        const statusBox = document.getElementById('statusBox');
+        if (!navigator.geolocation) {
+            alert('Hardware GPS coordinate access is not supported by your browser software.');
+            return;
+        }
+        statusBox.className = 'status loading';
+        statusBox.innerText = 'Locking on satellite array... Stand in clear line of sight.';
+        
+        navigator.geolocation.getCurrentPosition((position) => {
+            document.getElementById('lat_dd').value = position.coords.latitude.toFixed(6);
+            document.getElementById('lng_dd').value = position.coords.longitude.toFixed(6);
+            document.getElementById('accuracy').value = Math.round(position.coords.accuracy);
+            statusBox.className = 'status';
+            statusBox.innerText = '';
+        }, (error) => {
+            statusBox.className = 'status error';
+            statusBox.innerText = 'GPS Lock Error: ' + error.message + '. Ensure location permissions are active.';
+        }, { enableHighAccuracy: true, timeout: 10000 });
+    });
+
+    const readFileAsBase64 = (file) => {
+        return new Promise((resolve, reject) => {
+            if (!file) resolve({ data: "", name: "" });
+            const reader = new FileReader();
+            reader.onload = () => resolve({ data: reader.result, name: file.name });
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+    };
+
+    document.getElementById('surveyForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const statusBox = document.getElementById('statusBox');
+        const submitBtn = document.getElementById('subBtn');
+        
+        statusBox.className = 'status loading';
+        statusBox.innerText = 'Serializing data streams and files... Staging transmission packet.';
+        submitBtn.disabled = true;
+
+        try {
+            const mediaFile = document.getElementById('mediaFile').files[0];
+            const reportFile = document.getElementById('reportFile').files[0];
+            
+            const mediaObj = await readFileAsBase64(mediaFile);
+            const reportObj = await readFileAsBase64(reportFile);
+
+            const payload = {
+                archaeologist: document.getElementById('archaeologist').value,
+                siteName: document.getElementById('siteName').value,
+                latitude: document.getElementById('lat_dd').value,
+                longitude: document.getElementById('lng_dd').value,
+                accuracy: document.getElementById('accuracy').value || "0",
+                siteDescription: document.getElementById('siteDescription').value,
+                notes: document.getElementById('notes').value,
+                mediaData: mediaObj.data,
+                mediaName: mediaObj.name,
+                reportData: reportObj.data,
+                reportName: reportObj.name
+            };
+
+            await fetch(scriptURL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            statusBox.className = 'status success';
+            statusBox.innerText = 'Success! Field entry pushed securely to cloud system ledger rows.';
+            document.getElementById('surveyForm').reset();
+        } catch (error) {
+            statusBox.className = 'status error';
+            statusBox.innerText = 'System Write Fault: ' + error.toString();
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>
