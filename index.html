@@ -7,7 +7,6 @@
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /* 🇧🇼 Main Background: The majestic rock features of Tsodilo Hills */
             background: linear-gradient(rgba(42, 30, 22, 0.45), rgba(42, 30, 22, 0.45)), 
                         url('https://images.unsplash.com/photo-1627932341961-a083315a6b57?auto=format&fit=crop&q=80&w=1920') no-repeat center center fixed;
             background-size: cover;
@@ -16,7 +15,6 @@
             display: block;
         }
         .container {
-            /* 🇧🇼 Form Background: The open, textured salt crust horizons of the Makgadikgadi Pans */
             background: linear-gradient(rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.93)), 
                         url('https://images.unsplash.com/photo-1518098268026-4e43a1a009de?auto=format&fit=crop&q=80&w=800');
             background-size: cover;
@@ -48,7 +46,6 @@
         }
         input:focus, textarea:focus, select:focus { border-color: #a0522d; outline: none; background-color: #fff; }
         
-        /* 🚨 DYNAMIC BLINKING RED WARNING BANNER */
         .accuracy-warning {
             padding: 12px 15px; border-radius: 4px; margin-bottom: 20px; font-size: 13px; line-height: 1.4; max-height: 4.8em; overflow: hidden; animation: warningPulse 2s infinite ease-in-out;
         }
@@ -60,14 +57,10 @@
         .accuracy-warning strong { font-weight: 700; animation: textPulse 2s infinite ease-in-out; }
         @keyframes textPulse { 0% { color: #c96f2c; } 50% { color: #e53e3e; } 100% { color: #c96f2c; } }
         
-        /* 📐 COMPACT COORDINATE GRID ROW ALIGNMENTS */
-        .coord-row {
-            display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
-        }
+        .coord-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
         .coord-col-3 { flex: 1; min-width: 140px; }
         .coord-col-2 { flex: 1; min-width: 200px; }
 
-        /* 📂 FILE ATTACHMENT BOXES */
         .upload-zone {
             background-color: rgba(240, 237, 230, 0.6); border: 1px dashed #bdae9e; padding: 10px; border-radius: 4px; margin-top: 5px;
         }
@@ -108,7 +101,6 @@
         tr:hover { background-color: #faf8f5; }
         .search-box { margin-bottom: 15px; padding: 11px; width: 100%; border-radius: 4px; border: 1px solid #d1c7bd; box-sizing: border-box; font-size: 14px;}
         
-        /* Radio button formatting */
         .search-options { margin-bottom: 10px; display: flex; gap: 15px; font-size: 13px; font-weight: 600; color: #4a3b32; }
         .search-options label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; margin: 0; }
         .search-options input[type="radio"] { width: auto; margin: 0; cursor: pointer; }
@@ -290,6 +282,7 @@
 </div>
 
 <script>
+    // PASTE YOUR NEW RE-DEPLOYED WEB APP URL ENDING IN /exec HERE:
     const scriptURL = 'https://script.google.com/macros/s/AKfycbwybCEjytj9a0oJms9AIygfEcErBaIsEagqHK4GdArbxrw0Rb26tnK2k8Xqp7OdkDqzWQ/exec';
     
     let cachedSites = []; 
