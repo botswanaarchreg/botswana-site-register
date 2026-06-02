@@ -282,10 +282,7 @@
                 </tr>
             </thead>
             <tbody id="tableBody">
-                <tr class="message-row">
-                    <td colspan="3" style="text-align:center; color: #7f6b5c;">Establishing live link to inventory ledger...</td>
-                </tr>
-            </tbody>
+                </tbody>
         </table>
     </div>
 </div>
@@ -457,7 +454,7 @@
         })
         .catch(function(error) {
             console.error("Database read fault:", error);
-            tbody.innerHTML = '<tr class="message-row"><td colspan="3" style="text-align:center; color:#b23b3b;">Inventory data offline or waiting for setup link.</td></tr>';
+            tbody.innerHTML = '';
         });
     }
 
